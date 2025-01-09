@@ -5,7 +5,7 @@ import win32gui
 import win32ui
 import win32con
 import win32api
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance,ImageOps
 
 # Set Tesseract path
 TESSERACT_PATH = r'C:\Users\Alexwh\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
@@ -205,28 +205,43 @@ class ScreenCaptureOCR:
         
     def process_text(self, text):
         """
-        Minimal cleanup of OCR output to fix common date format issues.
+        Clean up OCR output specifically for read codes from SystmOne.
+        Format: DD MMM YYYY Description (CODE)
         """
         # Replace any zero-width spaces or other invisible characters
         text = text.replace('\u200b', ' ').replace('\n', ' ')
         
-        # Add spaces around any standalone digits
-        chars = []
-        for i, char in enumerate(text):
-            if i > 0 and i < len(text) - 1:
-                if (char.isdigit() and not text[i-1].isdigit() and not text[i+1].isdigit()):
-                    chars.extend([' ', char, ' '])
-                else:
-                    chars.append(char)
-            else:
-                chars.append(char)
-                
-        text = ''.join(chars)
-        
         # Clean up multiple spaces
         text = ' '.join(text.split())
         
-        return text
+        # Split by opening bracket to separate different codes
+        parts = text.split('(')
+        
+        formatted_codes = []
+        for i, part in enumerate(parts):
+            if i == 0:  # First part might not have a closing bracket
+                if part.strip():  # Only add if not empty
+                    formatted_codes.append(part.strip())
+            else:
+                # Find the closing bracket
+                code_parts = part.split(')')
+                if len(code_parts) >= 2:
+                    # Reconstruct with proper spacing
+                    code = f"({code_parts[0]})"
+                    
+                    # Add to previous line if it exists, otherwise start new line
+                    if formatted_codes:
+                        formatted_codes[-1] = formatted_codes[-1] + " " + code
+                    else:
+                        formatted_codes.append(code)
+                    
+                    # Add remaining text as new line if it exists
+                    remaining = ')'.join(code_parts[1:]).strip()
+                    if remaining:
+                        formatted_codes.append(remaining)
+        
+        # Join with newlines
+        return '\n'.join(formatted_codes)
 
     def capture_screen(self, bbox):
         x1, y1, x2, y2 = bbox
