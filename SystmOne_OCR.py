@@ -255,79 +255,78 @@ class ScreenCaptureOCR:
         
         return img
 
-    def remove_read_codes(self, text):
+    def format_date(self, text):
         """
-        Remove read codes (text in parentheses) from the input text.
-        Preserves the description and date format.
-        
-        Args:
-            text (str): Input text containing read codes
-        
-        Returns:
-            str: Text with read codes removed
+        Ensure proper spacing and formatting in dates.
+        Now handles various date formats and standardizes them.
         """
-        # Remove any content within parentheses
-        text = re.sub(r'\s*\([^)]*\)', '', text)
+        # List of month abbreviations
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         
-        # Clean up any resulting double spaces
-        text = ' '.join(text.split())
+        # Create regex pattern for dates with more flexible spacing
+        pattern = r'(\d{1,2})\s*(' + '|'.join(months) + r')\s*(\d{4})'
         
-        return text
-
-    def process_text(self, text):
-        """
-        Clean up OCR output from SystmOne, removing read codes.
-        Format: DD MMM YYYY Description
-        """
-        # Replace any zero-width spaces or other invisible characters
-        text = text.replace('\u200b', ' ').replace('\n', ' ')
-        
-        # Clean up multiple spaces
-        text = ' '.join(text.split())
-        
-        # Format dates properly
-        text = self.format_date(text)
-        
-        # Split text into lines (in case of multiple entries)
-        lines = text.split('\n')
-        formatted_lines = []
-        
-        for line in lines:
-            if line.strip():
-                # Clean up the description
-                cleaned_line = self.clean_description(line.strip())
-                # Remove read codes
-                cleaned_line = self.remove_read_codes(cleaned_line)
-                formatted_lines.append(cleaned_line)
-        
-        # Join with newlines
-        return '\n'.join(formatted_lines)
+        def repl(match):
+            day, month, year = match.groups()
+            # Ensure day is padded with leading zero if needed
+            return f"{day.zfill(2)} {month} {year}"
+            
+        return re.sub(pattern, repl, text)
 
     def clean_description(self, text):
         """
         Clean up special characters and formatting artifacts from the text.
+        Preserves proper capitalization and spacing.
         """
-        parts = text.split()
-        if len(parts) >= 3:
-            # Find the year (4 digits) in the text
-            year_index = -1
-            for i, part in enumerate(parts):
-                if re.match(r'^\d{4}$', part):
-                    year_index = i
-                    break
-                    
-            if year_index != -1:
-                date_part = ' '.join(parts[:year_index + 1])
-                rest = ' '.join(parts[year_index + 1:])
-                
-                # Clean up OCR artifacts and special characters
-                rest = re.sub(r'[_—~\-]+', ' ', rest)
-                rest = re.sub(r'\b[iI]\b', '', rest)
-                rest = rest.strip()
-                
-                return f"{date_part} {rest}"
+        # Remove OCR artifacts and special characters while preserving structure
+        text = re.sub(r'[_~]', '', text)  # Remove underscores and tildes
+        text = re.sub(r'\[(?:Dj|D|X|Xj)\]', '', text)  # Remove [D], [Dj], [X], [Xj] artifacts
+        text = re.sub(r'={1,2}\[(?:Xj|X)\]', '', text)  # Remove =[X], =[Xj], ==[X], ==[Xj] artifacts
+        text = re.sub(r'\s+', ' ', text)  # Normalize spaces
+        text = text.replace('j)', '')  # Remove trailing j) artifact
         
-        return text  # Return original if no year found
+        return text.strip()
+
+    def remove_read_codes(self, text):
+        """
+        Remove read codes (alphanumeric codes in parentheses) from the text.
+        """
+        # Remove the read codes (alphanumeric sequences in parentheses)
+        text = re.sub(r'\s*\([A-Z0-9.]+\)', '', text)
+        return text.strip()
+
+    def process_text(self, text):
+        """
+        Process OCR output to match the original format.
+        Each entry should be on its own line with consistent date formatting.
+        """
+        # Initial cleanup
+        text = text.replace('\u200b', ' ')  # Remove zero-width spaces
+        
+        # Split into lines and process each line
+        lines = text.split('\n')
+        formatted_entries = []
+        
+        for line in lines:
+            if not line.strip():
+                continue
+                
+            # Clean up the line
+            line = self.clean_description(line)
+            line = self.remove_read_codes(line)
+            
+            # Format the date if present
+            line = self.format_date(line)
+            
+            if line.strip():
+                formatted_entries.append(line)
+        
+        # Remove duplicate entries that might have been created by OCR
+        formatted_entries = [entry for i, entry in enumerate(formatted_entries) 
+                            if entry not in formatted_entries[:i]]
+        
+        # Join with newlines for final output
+        return '\n'.join(formatted_entries)
 
 def main():
     app = ScreenCaptureOCR()
