@@ -6,7 +6,7 @@ import win32ui
 import win32con
 import win32api
 import re
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageOps, ImageEnhance
 
 # Set Tesseract path
 TESSERACT_PATH = r'C:\Users\Alexwh\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
@@ -222,6 +222,61 @@ class ScreenCaptureOCR:
             
         return re.sub(pattern, repl, text)
 
+      
+    def clean_description(self, text):
+            """
+            Clean up special characters and formatting artifacts from the text.
+            """
+            parts = text.split()
+            if len(parts) >= 3:
+                for i, part in enumerate(parts):
+                    if re.match(r'^\d{4}$', part):  # Added closing quote and $ for end of string
+                        date_part = ' '.join(parts[:i+1])
+                        rest = ' '.join(parts[i+1:])
+                        
+                        # Clean up OCR artifacts and special characters
+                        rest = re.sub(r'[_—~\-]+', ' ', rest)
+                        rest = re.sub(r'\b[iI]\b', '', rest) # Remove standalone "i" or "I" as whole words
+                        rest = rest.strip() # Remove leading/trailing whitespace
+                        return f"{date_part} {rest}" #Simplified return
+
+            return text # Return original if no year found  
+
+    def capture_screen(self, bbox):
+        x1, y1, x2, y2 = bbox
+        width = x2 - x1
+        height = y2 - y1
+        
+        # Create device context
+        hwnd = win32gui.GetDesktopWindow()
+        hwndDC = win32gui.GetWindowDC(hwnd)
+        mfcDC = win32ui.CreateDCFromHandle(hwndDC)
+        saveDC = mfcDC.CreateCompatibleDC()
+        
+        # Create bitmap
+        saveBitMap = win32ui.CreateBitmap()
+        saveBitMap.CreateCompatibleBitmap(mfcDC, width, height)
+        saveDC.SelectObject(saveBitMap)
+        
+        # Copy screen to bitmap
+        saveDC.BitBlt((0, 0), (width, height), mfcDC, (x1, y1), win32con.SRCCOPY)
+        
+        # Convert to PIL Image
+        bmpinfo = saveBitMap.GetInfo()
+        bmpstr = saveBitMap.GetBitmapBits(True)
+        img = Image.frombuffer(
+            'RGB',
+            (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+            bmpstr, 'raw', 'BGRX', 0, 1)
+        
+        # Clean up
+        saveDC.DeleteDC()
+        mfcDC.DeleteDC()
+        win32gui.ReleaseDC(hwnd, hwndDC)
+        win32gui.DeleteObject(saveBitMap.GetHandle())
+        
+        return img
+
     def process_text(self, text):
         """
         Clean up OCR output specifically for read codes from SystmOne.
@@ -243,7 +298,8 @@ class ScreenCaptureOCR:
         for i, part in enumerate(parts):
             if i == 0:  # First part might not have a closing bracket
                 if part.strip():  # Only add if not empty
-                    formatted_codes.append(part.strip())
+                    cleaned_part = self.clean_description(part.strip())
+                    formatted_codes.append(cleaned_part)
             else:
                 # Find the closing bracket
                 code_parts = part.split(')')
@@ -260,7 +316,8 @@ class ScreenCaptureOCR:
                     # Add remaining text as new line if it exists
                     remaining = ')'.join(code_parts[1:]).strip()
                     if remaining:
-                        formatted_codes.append(remaining)
+                        cleaned_remaining = self.clean_description(remaining)
+                        formatted_codes.append(cleaned_remaining)
         
         # Join with newlines
         return '\n'.join(formatted_codes)
