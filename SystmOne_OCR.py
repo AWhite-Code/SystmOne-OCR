@@ -6,7 +6,7 @@ import win32ui
 import win32con
 import win32api
 import re
-from PIL import Image, ImageEnhance,ImageOps
+from PIL import Image, ImageEnhance, ImageOps
 
 # Set Tesseract path
 TESSERACT_PATH = r'C:\Users\Alexwh\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
@@ -217,7 +217,8 @@ class ScreenCaptureOCR:
         
         def repl(match):
             day, month, year = match.groups()
-            return f"{day:02d} {month} {year}"
+            # Ensure day is padded with leading zero if needed
+            return f"{day.zfill(2)} {month} {year}"
             
         return re.sub(pattern, repl, text)
 
