@@ -5,6 +5,7 @@ import win32gui
 import win32ui
 import win32con
 import win32api
+import re
 from PIL import Image, ImageEnhance,ImageOps
 
 # Set Tesseract path
@@ -203,6 +204,23 @@ class ScreenCaptureOCR:
         
         return padded
         
+    def format_date(self, text):
+        """
+        Ensure proper spacing in dates while preserving other text.
+        """
+        # List of month abbreviations
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        # Create regex pattern for dates
+        # Matches: 1-2 digits + optional space + month + optional space + 4 digits
+        pattern = r'(\d{1,2})\s*(' + '|'.join(months) + r')\s*(\d{4})'
+        
+        def repl(match):
+            day, month, year = match.groups()
+            return f"{day:02d} {month} {year}"
+            
+        return re.sub(pattern, repl, text)
+
     def process_text(self, text):
         """
         Clean up OCR output specifically for read codes from SystmOne.
@@ -213,6 +231,9 @@ class ScreenCaptureOCR:
         
         # Clean up multiple spaces
         text = ' '.join(text.split())
+        
+        # Format dates properly
+        text = self.format_date(text)
         
         # Split by opening bracket to separate different codes
         parts = text.split('(')
