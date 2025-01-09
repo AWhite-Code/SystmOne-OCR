@@ -201,24 +201,6 @@ class ScreenCaptureOCR:
         padded.save('debug_ocr.png')
         
         return padded
-        
-    def format_date(self, text):
-        """
-        Ensure proper spacing in dates while preserving other text.
-        """
-        # List of month abbreviations
-        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        
-        # Create regex pattern for dates
-        # Matches: 1-2 digits + optional space + month + optional space + 4 digits
-        pattern = r'(\d{1,2})\s*(' + '|'.join(months) + r')\s*(\d{4})'
-        
-        def repl(match):
-            day, month, year = match.groups()
-            # Ensure day is padded with leading zero if needed
-            return f"{day.zfill(2)} {month} {year}"
-            
-        return re.sub(pattern, repl, text)
 
     def capture_screen(self, bbox):
         x1, y1, x2, y2 = bbox
@@ -276,23 +258,48 @@ class ScreenCaptureOCR:
     def clean_description(self, text):
         """
         Clean up special characters and formatting artifacts from the text.
-        Preserves proper capitalization and spacing.
+        Preserves proper capitalization and spacing while handling OCR quirks.
         """
+        # Fix common OCR date formatting issues
+        months = "(?:Oct|Dec|Feb|Jan|Mar|Apr|May|Jun|Jul|Aug|Sep|Nov)"
+        text = re.sub(f'(\d+)({months})', r'\1 \2', text)  # Add space between day and month if missing
+        
         # Remove OCR artifacts and special characters while preserving structure
         text = re.sub(r'[_~]', '', text)  # Remove underscores and tildes
         text = re.sub(r'\[(?:Dj|D|X|Xj)\]', '', text)  # Remove [D], [Dj], [X], [Xj] artifacts
         text = re.sub(r'={1,2}\[(?:Xj|X)\]', '', text)  # Remove =[X], =[Xj], ==[X], ==[Xj] artifacts
+        text = re.sub(r'(?:—|-)+\s*', '', text)  # Remove em dashes and hyphens
+        text = re.sub(r'=+\s*', '', text)  # Remove equals signs
         text = re.sub(r'\s+', ' ', text)  # Normalize spaces
-        text = text.replace('j)', '')  # Remove trailing j) artifact
         
         return text.strip()
 
     def remove_read_codes(self, text):
         """
-        Remove read codes (alphanumeric codes in parentheses) from the text.
+        Remove read codes from the text, handling various formats and OCR artifacts.
+        
+        Patterns handled:
+        - Standard format: (XE0r9)
+        - Missing closing parenthesis: (XE0r9
+        - OCR artifacts: = or — before codes
+        - Mixed case: XE2y7
+        - Various symbols: dots, periods
         """
-        # Remove the read codes (alphanumeric sequences in parentheses)
-        text = re.sub(r'\s*\([A-Z0-9.]+\)', '', text)
+        # Remove codes with surrounding parentheses
+        text = re.sub(r'\s*\([A-Za-z0-9._]+\)', '', text)
+        
+        # Remove codes with opening parenthesis but missing closing one
+        text = re.sub(r'\s*\([A-Za-z0-9._]+(?=\s|$)', '', text)
+        
+        # Remove any leading equals signs or dashes (OCR artifacts)
+        text = re.sub(r'(?:=|—|-)\s*', '', text)
+        
+        # Remove any single quotes that might appear (OCR artifacts)
+        text = text.replace("'", "")
+        
+        # Clean up any resulting double spaces
+        text = re.sub(r'\s+', ' ', text)
+        
         return text.strip()
 
     def process_text(self, text):
