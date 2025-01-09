@@ -220,26 +220,6 @@ class ScreenCaptureOCR:
             
         return re.sub(pattern, repl, text)
 
-      
-    def clean_description(self, text):
-            """
-            Clean up special characters and formatting artifacts from the text.
-            """
-            parts = text.split()
-            if len(parts) >= 3:
-                for i, part in enumerate(parts):
-                    if re.match(r'^\d{4}$', part):                      # Added closing quote and $ for end of string
-                        date_part = ' '.join(parts[:i+1])
-                        rest = ' '.join(parts[i+1:])
-                        
-                        # Clean up OCR artifacts and special characters
-                        rest = re.sub(r'[_—~\-]+', ' ', rest)           # Remove strange and inappropriate characters
-                        rest = re.sub(r'\b[iI]\b', '', rest)            # Remove standalone "i" or "I" as whole words
-                        rest = rest.strip()                             # Remove leading/trailing whitespace
-                        return f"{date_part} {rest}"                    #Simplified return
-
-            return text # Return original if no year found  
-
     def capture_screen(self, bbox):
         x1, y1, x2, y2 = bbox
         width = x2 - x1
@@ -275,10 +255,29 @@ class ScreenCaptureOCR:
         
         return img
 
+    def remove_read_codes(self, text):
+        """
+        Remove read codes (text in parentheses) from the input text.
+        Preserves the description and date format.
+        
+        Args:
+            text (str): Input text containing read codes
+        
+        Returns:
+            str: Text with read codes removed
+        """
+        # Remove any content within parentheses
+        text = re.sub(r'\s*\([^)]*\)', '', text)
+        
+        # Clean up any resulting double spaces
+        text = ' '.join(text.split())
+        
+        return text
+
     def process_text(self, text):
         """
-        Clean up OCR output specifically for read codes from SystmOne.
-        Format: DD MMM YYYY Description (CODE)
+        Clean up OCR output from SystmOne, removing read codes.
+        Format: DD MMM YYYY Description
         """
         # Replace any zero-width spaces or other invisible characters
         text = text.replace('\u200b', ' ').replace('\n', ' ')
@@ -289,71 +288,46 @@ class ScreenCaptureOCR:
         # Format dates properly
         text = self.format_date(text)
         
-        # Split by opening bracket to separate different codes
-        parts = text.split('(')
+        # Split text into lines (in case of multiple entries)
+        lines = text.split('\n')
+        formatted_lines = []
         
-        formatted_codes = []
-        for i, part in enumerate(parts):
-            if i == 0:  # First part might not have a closing bracket
-                if part.strip():  # Only add if not empty
-                    cleaned_part = self.clean_description(part.strip())
-                    formatted_codes.append(cleaned_part)
-            else:
-                # Find the closing bracket
-                code_parts = part.split(')')
-                if len(code_parts) >= 2:
-                    # Reconstruct with proper spacing
-                    code = f"({code_parts[0]})"
-                    
-                    # Add to previous line if it exists, otherwise start new line
-                    if formatted_codes:
-                        formatted_codes[-1] = formatted_codes[-1] + " " + code
-                    else:
-                        formatted_codes.append(code)
-                    
-                    # Add remaining text as new line if it exists
-                    remaining = ')'.join(code_parts[1:]).strip()
-                    if remaining:
-                        cleaned_remaining = self.clean_description(remaining)
-                        formatted_codes.append(cleaned_remaining)
+        for line in lines:
+            if line.strip():
+                # Clean up the description
+                cleaned_line = self.clean_description(line.strip())
+                # Remove read codes
+                cleaned_line = self.remove_read_codes(cleaned_line)
+                formatted_lines.append(cleaned_line)
         
         # Join with newlines
-        return '\n'.join(formatted_codes)
+        return '\n'.join(formatted_lines)
 
-    def capture_screen(self, bbox):
-        x1, y1, x2, y2 = bbox
-        width = x2 - x1
-        height = y2 - y1
+    def clean_description(self, text):
+        """
+        Clean up special characters and formatting artifacts from the text.
+        """
+        parts = text.split()
+        if len(parts) >= 3:
+            # Find the year (4 digits) in the text
+            year_index = -1
+            for i, part in enumerate(parts):
+                if re.match(r'^\d{4}$', part):
+                    year_index = i
+                    break
+                    
+            if year_index != -1:
+                date_part = ' '.join(parts[:year_index + 1])
+                rest = ' '.join(parts[year_index + 1:])
+                
+                # Clean up OCR artifacts and special characters
+                rest = re.sub(r'[_—~\-]+', ' ', rest)
+                rest = re.sub(r'\b[iI]\b', '', rest)
+                rest = rest.strip()
+                
+                return f"{date_part} {rest}"
         
-        # Create device context
-        hwnd = win32gui.GetDesktopWindow()
-        hwndDC = win32gui.GetWindowDC(hwnd)
-        mfcDC = win32ui.CreateDCFromHandle(hwndDC)
-        saveDC = mfcDC.CreateCompatibleDC()
-        
-        # Create bitmap
-        saveBitMap = win32ui.CreateBitmap()
-        saveBitMap.CreateCompatibleBitmap(mfcDC, width, height)
-        saveDC.SelectObject(saveBitMap)
-        
-        # Copy screen to bitmap
-        saveDC.BitBlt((0, 0), (width, height), mfcDC, (x1, y1), win32con.SRCCOPY)
-        
-        # Convert to PIL Image
-        bmpinfo = saveBitMap.GetInfo()
-        bmpstr = saveBitMap.GetBitmapBits(True)
-        img = Image.frombuffer(
-            'RGB',
-            (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-            bmpstr, 'raw', 'BGRX', 0, 1)
-        
-        # Clean up
-        saveDC.DeleteDC()
-        mfcDC.DeleteDC()
-        win32gui.ReleaseDC(hwnd, hwndDC)
-        win32gui.DeleteObject(saveBitMap.GetHandle())
-        
-        return img
+        return text  # Return original if no year found
 
 def main():
     app = ScreenCaptureOCR()
