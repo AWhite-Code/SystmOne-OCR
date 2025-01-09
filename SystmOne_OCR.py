@@ -166,8 +166,6 @@ class ScreenCaptureOCR:
                 
                 # Copy to clipboard
                 pyperclip.copy(text.strip())
-                # Copy to clipboard
-                pyperclip.copy(text.strip())
                 
             except Exception as e:
                 print(f"Error occurred: {str(e)}")
