@@ -230,15 +230,15 @@ class ScreenCaptureOCR:
             parts = text.split()
             if len(parts) >= 3:
                 for i, part in enumerate(parts):
-                    if re.match(r'^\d{4}$', part):  # Added closing quote and $ for end of string
+                    if re.match(r'^\d{4}$', part):                      # Added closing quote and $ for end of string
                         date_part = ' '.join(parts[:i+1])
                         rest = ' '.join(parts[i+1:])
                         
                         # Clean up OCR artifacts and special characters
-                        rest = re.sub(r'[_—~\-]+', ' ', rest)
-                        rest = re.sub(r'\b[iI]\b', '', rest) # Remove standalone "i" or "I" as whole words
-                        rest = rest.strip() # Remove leading/trailing whitespace
-                        return f"{date_part} {rest}" #Simplified return
+                        rest = re.sub(r'[_—~\-]+', ' ', rest)           # Remove strange and inappropriate characters
+                        rest = re.sub(r'\b[iI]\b', '', rest)            # Remove standalone "i" or "I" as whole words
+                        rest = rest.strip()                             # Remove leading/trailing whitespace
+                        return f"{date_part} {rest}"                    #Simplified return
 
             return text # Return original if no year found  
 
