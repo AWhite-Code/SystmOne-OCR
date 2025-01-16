@@ -1,0 +1,12 @@
+{
+    "recommendations": [
+        "davidanson.vscode-markdownlint",
+        "donjayamanne.githistory",
+        "dotjoshjohnson.xml",
+        "eamodio.gitlens",
+        "ms-python.black-formatter",
+        "ms-python.debugpy",
+        "ms-python.vscode-pylance",
+        "ms-python.python"
+    ]
+}

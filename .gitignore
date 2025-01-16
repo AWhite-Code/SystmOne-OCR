@@ -37,11 +37,10 @@ vendor/tesseract/
 # Debug files
 debug_ocr.png
 
-# IDE specific files
-.idea/
-.vscode/
-*.swp
-*.swo
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 
 # OS specific files
 .DS_Store
