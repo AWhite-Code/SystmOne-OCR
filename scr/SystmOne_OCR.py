@@ -7,6 +7,7 @@ import win32con
 import win32api
 import re
 from PIL import Image, ImageOps, ImageEnhance
+from ocr.image_processor import ImageProcessor
 
 # Set Tesseract path
 TESSERACT_PATH = r'vendor/tesseract/tesseract.exe'
@@ -17,6 +18,7 @@ class ScreenCaptureOCR:
         # Get information about all monitors
         monitors = win32api.EnumDisplayMonitors()
         self.monitor_info = []
+        self.image_processor = ImageProcessor(TESSERACT_PATH)
         
         for monitor in monitors:
             info = win32api.GetMonitorInfo(monitor[0])
@@ -154,12 +156,9 @@ class ScreenCaptureOCR:
                 # Take screenshot
                 screenshot = self.capture_screen((x1, y1, x2, y2))
                 
-                # Preprocess the image
-                processed_image = self.preprocess_image(screenshot)
-                
-                # Perform OCR with custom configuration
-                custom_config = r'--oem 3 --psm 6 -c preserve_interword_spaces=1'
-                raw_text = pytesseract.image_to_string(processed_image, config=custom_config)
+                # Use ImageProcessor for OCR
+                processed_image = self.image_processor.preprocess_image(screenshot)
+                raw_text = self.image_processor.perform_ocr(processed_image)
                 
                 # Process and clean up the text
                 text = self.process_text(raw_text)
@@ -173,34 +172,6 @@ class ScreenCaptureOCR:
             finally:
                 # Quit application
                 self.root.quit()
-    
-    def preprocess_image(self, image):
-        """
-        Preprocess the image to improve OCR accuracy for blue text.
-        """
-        # Convert to RGB if not already
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-            
-        # Scale up first to avoid losing detail
-        scaled = image.resize((image.width * 3, image.height * 3), Image.LANCZOS)
-        
-        # Convert to grayscale
-        gray = ImageOps.grayscale(scaled)
-        
-        # Increase contrast
-        contrast = ImageEnhance.Contrast(gray).enhance(3.0)
-        
-        # Slightly increase brightness to make text clearer
-        brightness = ImageEnhance.Brightness(contrast).enhance(1.1)
-        
-        # Add padding around the image to help with character recognition
-        padded = ImageOps.expand(brightness, border=20, fill=255)
-        
-        # Save debug image
-        padded.save('debug_ocr.png')
-        
-        return padded
 
     def capture_screen(self, bbox):
         x1, y1, x2, y2 = bbox
