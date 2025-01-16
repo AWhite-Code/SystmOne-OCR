@@ -8,6 +8,7 @@ import win32api
 import re
 from PIL import Image, ImageOps, ImageEnhance
 from ocr.image_processor import ImageProcessor
+from config import TESSERACT_PATH, OVERLAY_ALPHA, SELECTION_BORDER_COLOR, SELECTION_BORDER_WIDTH
 
 # Set Tesseract path
 TESSERACT_PATH = r'vendor/tesseract/tesseract.exe'

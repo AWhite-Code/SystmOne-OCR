@@ -1,5 +1,13 @@
 from PIL import Image, ImageOps, ImageEnhance
 import pytesseract
+from ..config import (
+    IMAGE_SCALE_FACTOR,
+    CONTRAST_ENHANCE_FACTOR,
+    BRIGHTNESS_ENHANCE_FACTOR,
+    IMAGE_PADDING,
+    SAVE_DEBUG_IMAGE,
+    DEBUG_IMAGE_PATH
+)
 
 class ImageProcessor:
     def __init__(self, tesseract_path):
@@ -15,22 +23,27 @@ class ImageProcessor:
             image = image.convert('RGB')
             
         # Scale up first to avoid losing detail
-        scaled = image.resize((image.width * 3, image.height * 3), Image.LANCZOS)
+        scaled = image.resize(
+            (image.width * IMAGE_SCALE_FACTOR, 
+             image.height * IMAGE_SCALE_FACTOR), 
+            Image.LANCZOS
+        )
         
         # Convert to grayscale
         gray = ImageOps.grayscale(scaled)
         
         # Increase contrast
-        contrast = ImageEnhance.Contrast(gray).enhance(3.0)
+        contrast = ImageEnhance.Contrast(gray).enhance(CONTRAST_ENHANCE_FACTOR)
         
         # Slightly increase brightness to make text clearer
-        brightness = ImageEnhance.Brightness(contrast).enhance(1.1)
+        brightness = ImageEnhance.Brightness(contrast).enhance(BRIGHTNESS_ENHANCE_FACTOR)
         
         # Add padding around the image to help with character recognition
-        padded = ImageOps.expand(brightness, border=20, fill=255)
+        padded = ImageOps.expand(brightness, border=IMAGE_PADDING, fill=255)
         
-        # Save debug image if needed
-        padded.save('debug_ocr.png')
+        # Save debug image if enabled
+        if SAVE_DEBUG_IMAGE:
+            padded.save(DEBUG_IMAGE_PATH)
         
         return padded
 
