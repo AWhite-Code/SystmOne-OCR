@@ -9,6 +9,7 @@ import re
 from PIL import Image, ImageOps, ImageEnhance
 from ocr.image_processor import ImageProcessor
 from ocr.text_processor import TextProcessor
+from capture.capture_window import CaptureWindow
 from config import TESSERACT_PATH, OVERLAY_ALPHA, SELECTION_BORDER_COLOR, SELECTION_BORDER_WIDTH
 
 # Set Tesseract path
@@ -21,6 +22,7 @@ class ScreenCaptureOCR:
         self.monitor_info = []
         self.image_processor = ImageProcessor(TESSERACT_PATH)
         self.text_processor = TextProcessor()
+        self.capture_window = CaptureWindow()
         
         for monitor in monitors:
             info = win32api.GetMonitorInfo(monitor[0])
@@ -29,10 +31,7 @@ class ScreenCaptureOCR:
         
         # Calculate total dimensions
         monitor_rects = [info['Monitor'] for info in self.monitor_info]
-        self.total_width = max(rect[2] for rect in monitor_rects)
-        self.total_height = max(rect[3] for rect in monitor_rects)
-        self.min_x = min(rect[0] for rect in monitor_rects)
-        self.min_y = min(rect[1] for rect in monitor_rects)
+        total_width, total_height, min_x, min_y = self.capture_window.get_screen_dimensions()
         
         # Create main window for the dark overlay
         self.root = tk.Tk()
@@ -42,14 +41,14 @@ class ScreenCaptureOCR:
         self.root.attributes('-topmost', True)
         
         # Position and size the window to cover all monitors
-        self.root.geometry(f"{self.total_width}x{self.total_height}+{self.min_x}+{self.min_y}")
+        self.root.geometry(f"{total_width}x{total_height}+{min_x}+{min_y}")
         
         # Create canvas for the dark overlay
         self.canvas = tk.Canvas(
             self.root,
             cursor="cross",
-            width=self.total_width,
-            height=self.total_height,
+            width=total_width,
+            height=total_height,
             highlightthickness=0,
             bg='black'
         )
@@ -60,7 +59,7 @@ class ScreenCaptureOCR:
         self.selection_window.overrideredirect(True)
         self.selection_window.attributes('-alpha', 1.0)  # Fully opaque
         self.selection_window.attributes('-topmost', True)
-        self.selection_window.geometry(f"{self.total_width}x{self.total_height}+{self.min_x}+{self.min_y}")
+        self.selection_window.geometry(f"{total_width}x{total_height}+{min_x}+{min_y}")
         
         # Make selection window transparent and click-through
         self.selection_window.attributes('-transparentcolor', 'black')
@@ -68,8 +67,8 @@ class ScreenCaptureOCR:
         # Create canvas for the selection rectangle
         self.selection_canvas = tk.Canvas(
             self.selection_window,
-            width=self.total_width,
-            height=self.total_height,
+            width=total_width,
+            height=total_height,
             highlightthickness=0,
             bg='black'
         )
@@ -156,7 +155,7 @@ class ScreenCaptureOCR:
             
             try:
                 # Take screenshot
-                screenshot = self.capture_screen((x1, y1, x2, y2))
+                screenshot = self.capture_window.capture_screen((x1, y1, x2, y2))
                 
                 # Use ImageProcessor for OCR
                 processed_image = self.image_processor.preprocess_image(screenshot)
