@@ -9,7 +9,7 @@ import re
 from PIL import Image, ImageOps, ImageEnhance
 
 # Set Tesseract path
-TESSERACT_PATH = r'C:\Users\Alexwh\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+TESSERACT_PATH = r'vendor/tesseract/tesseract.exe'
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
 class ScreenCaptureOCR:
