@@ -10,14 +10,14 @@ class SelectionWindow:
     def __init__(self, dimensions: Tuple[int, int, int, int], on_selection_complete: Callable):
         """
         Initialize the selection window system.
-        
+
         Args:
             dimensions: Tuple of (total_width, total_height, min_x, min_y)
             on_selection_complete: Callback function when selection is complete
         """
         self.total_width, self.total_height, self.min_x, self.min_y = dimensions
         self.on_selection_complete = on_selection_complete
-        
+
         # Initialize state variables
         self.start_x: Optional[int] = None
         self.start_y: Optional[int] = None
@@ -25,7 +25,7 @@ class SelectionWindow:
         self.canvas_start_y: Optional[int] = None
         self.current_rect = None
         self.clear_area = None
-        
+
         self._setup_main_window()
         self._setup_selection_window()
         self._bind_events()
@@ -37,10 +37,10 @@ class SelectionWindow:
         self.root.overrideredirect(True)
         self.root.attributes('-alpha', OVERLAY_ALPHA)
         self.root.attributes('-topmost', True)
-        
+
         # Position and size the window to cover all monitors
         self.root.geometry(f"{self.total_width}x{self.total_height}+{self.min_x}+{self.min_y}")
-        
+
         # Create canvas for the dark overlay
         self.canvas = tk.Canvas(
             self.root,
@@ -61,10 +61,10 @@ class SelectionWindow:
         self.selection_window.geometry(
             f"{self.total_width}x{self.total_height}+{self.min_x}+{self.min_y}"
         )
-        
+
         # Make selection window transparent and click-through
         self.selection_window.attributes('-transparentcolor', 'black')
-        
+
         # Create canvas for the selection rectangle
         self.selection_canvas = tk.Canvas(
             self.selection_window,
@@ -89,13 +89,13 @@ class SelectionWindow:
         self.start_y = self.root.winfo_y() + event.y
         self.canvas_start_x = event.x
         self.canvas_start_y = event.y
-        
+
         # Delete existing rectangles if any
         if self.current_rect:
             self.selection_canvas.delete(self.current_rect)
         if self.clear_area:
             self.canvas.delete(self.clear_area)
-        
+
         # Create selection rectangle with configured appearance
         self.current_rect = self.selection_canvas.create_rectangle(
             self.canvas_start_x, self.canvas_start_y,
@@ -103,7 +103,7 @@ class SelectionWindow:
             outline=SELECTION_BORDER_COLOR,
             width=SELECTION_BORDER_WIDTH
         )
-        
+
         # Create clear area in overlay
         self.clear_area = self.canvas.create_rectangle(
             self.canvas_start_x, self.canvas_start_y,
@@ -111,7 +111,7 @@ class SelectionWindow:
             fill='white',
             stipple='gray50'
         )
-        
+
         # Make overlay more transparent while selecting
         self.root.attributes('-alpha', 0.1)
 
@@ -136,15 +136,15 @@ class SelectionWindow:
             # Calculate final coordinates
             end_x = self.root.winfo_x() + event.x
             end_y = self.root.winfo_y() + event.y
-            
+
             x1 = min(self.start_x, end_x)
             y1 = min(self.start_y, end_y)
             x2 = max(self.start_x, end_x)
             y2 = max(self.start_y, end_y)
-            
+
             # Hide windows for clean capture
             self.hide_windows()
-            
+
             # Call the completion callback with coordinates
             self.on_selection_complete((x1, y1, x2, y2))
 
