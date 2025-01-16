@@ -12,7 +12,6 @@ from ocr.text_processor import TextProcessor
 from config import TESSERACT_PATH, OVERLAY_ALPHA, SELECTION_BORDER_COLOR, SELECTION_BORDER_WIDTH
 
 # Set Tesseract path
-TESSERACT_PATH = r'vendor/tesseract/tesseract.exe'
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
 class ScreenCaptureOCR:

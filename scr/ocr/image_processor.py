@@ -1,6 +1,6 @@
 from PIL import Image, ImageOps, ImageEnhance
 import pytesseract
-from ..config import (
+from config import (
     IMAGE_SCALE_FACTOR,
     CONTRAST_ENHANCE_FACTOR,
     BRIGHTNESS_ENHANCE_FACTOR,
