@@ -1,13 +1,12 @@
 import tkinter as tk
 from typing import Tuple, Optional, Callable
-from config import (
-    OVERLAY_ALPHA,
-    SELECTION_BORDER_COLOR,
-    SELECTION_BORDER_WIDTH
-)
+from config import OVERLAY_ALPHA, SELECTION_BORDER_COLOR, SELECTION_BORDER_WIDTH
+
 
 class SelectionWindow:
-    def __init__(self, dimensions: Tuple[int, int, int, int], on_selection_complete: Callable):
+    def __init__(
+        self, dimensions: Tuple[int, int, int, int], on_selection_complete: Callable
+    ):
         """
         Initialize the selection window system.
 
@@ -19,12 +18,12 @@ class SelectionWindow:
         self.on_selection_complete = on_selection_complete
 
         # Initialize state variables
-        self.start_x: Optional[int] = None
-        self.start_y: Optional[int] = None
-        self.canvas_start_x: Optional[int] = None
-        self.canvas_start_y: Optional[int] = None
-        self.current_rect = None
-        self.clear_area = None
+        self.start_x: float = 0.0
+        self.start_y: float = 0.0
+        self.canvas_start_x: float = 0.0
+        self.canvas_start_y: float = 0.0
+        self.current_rect: Optional[int] = None
+        self.clear_area: Optional[int] = None
 
         self._setup_main_window()
         self._setup_selection_window()
@@ -35,11 +34,13 @@ class SelectionWindow:
         self.root = tk.Tk()
         self.root.title("Screen Capture OCR")
         self.root.overrideredirect(True)
-        self.root.attributes('-alpha', OVERLAY_ALPHA)
-        self.root.attributes('-topmost', True)
+        self.root.attributes("-alpha", OVERLAY_ALPHA)
+        self.root.attributes("-topmost", True)
 
         # Position and size the window to cover all monitors
-        self.root.geometry(f"{self.total_width}x{self.total_height}+{self.min_x}+{self.min_y}")
+        self.root.geometry(
+            f"{self.total_width}x{self.total_height}+{self.min_x}+{self.min_y}"
+        )
 
         # Create canvas for the dark overlay
         self.canvas = tk.Canvas(
@@ -48,7 +49,7 @@ class SelectionWindow:
             width=self.total_width,
             height=self.total_height,
             highlightthickness=0,
-            bg='black'
+            bg="black",
         )
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
@@ -56,14 +57,14 @@ class SelectionWindow:
         """Set up the transparent selection window."""
         self.selection_window = tk.Toplevel(self.root)
         self.selection_window.overrideredirect(True)
-        self.selection_window.attributes('-alpha', 1.0)
-        self.selection_window.attributes('-topmost', True)
+        self.selection_window.attributes("-alpha", 1.0)
+        self.selection_window.attributes("-topmost", True)
         self.selection_window.geometry(
             f"{self.total_width}x{self.total_height}+{self.min_x}+{self.min_y}"
         )
 
         # Make selection window transparent and click-through
-        self.selection_window.attributes('-transparentcolor', 'black')
+        self.selection_window.attributes("-transparentcolor", "black")
 
         # Create canvas for the selection rectangle
         self.selection_canvas = tk.Canvas(
@@ -71,7 +72,7 @@ class SelectionWindow:
             width=self.total_width,
             height=self.total_height,
             highlightthickness=0,
-            bg='black'
+            bg="black",
         )
         self.selection_canvas.pack(fill=tk.BOTH, expand=True)
 
@@ -85,35 +86,39 @@ class SelectionWindow:
     def _on_press(self, event):
         """Handle mouse button press."""
         # Store both screen and canvas coordinates
-        self.start_x = self.root.winfo_x() + event.x
-        self.start_y = self.root.winfo_y() + event.y
-        self.canvas_start_x = event.x
-        self.canvas_start_y = event.y
+        self.start_x = float(self.root.winfo_x() + event.x)
+        self.start_y = float(self.root.winfo_y() + event.y)
+        self.canvas_start_x = float(event.x)
+        self.canvas_start_y = float(event.y)
 
         # Delete existing rectangles if any
-        if self.current_rect:
+        if self.current_rect is not None:
             self.selection_canvas.delete(self.current_rect)
-        if self.clear_area:
+        if self.clear_area is not None:
             self.canvas.delete(self.clear_area)
 
         # Create selection rectangle with configured appearance
         self.current_rect = self.selection_canvas.create_rectangle(
-            self.canvas_start_x, self.canvas_start_y,
-            self.canvas_start_x, self.canvas_start_y,
+            self.canvas_start_x,
+            self.canvas_start_y,
+            self.canvas_start_x,
+            self.canvas_start_y,
             outline=SELECTION_BORDER_COLOR,
-            width=SELECTION_BORDER_WIDTH
+            width=SELECTION_BORDER_WIDTH,
         )
 
         # Create clear area in overlay
         self.clear_area = self.canvas.create_rectangle(
-            self.canvas_start_x, self.canvas_start_y,
-            self.canvas_start_x, self.canvas_start_y,
-            fill='white',
-            stipple='gray50'
+            self.canvas_start_x,
+            self.canvas_start_y,
+            self.canvas_start_x,
+            self.canvas_start_y,
+            fill="white",
+            stipple="gray50",
         )
 
         # Make overlay more transparent while selecting
-        self.root.attributes('-alpha', 0.1)
+        self.root.attributes("-alpha", 0.1)
 
     def _on_drag(self, event):
         """Handle mouse drag."""
@@ -121,13 +126,17 @@ class SelectionWindow:
             # Update both rectangles
             self.selection_canvas.coords(
                 self.current_rect,
-                self.canvas_start_x, self.canvas_start_y,
-                event.x, event.y
+                self.canvas_start_x,
+                self.canvas_start_y,
+                event.x,
+                event.y,
             )
             self.canvas.coords(
                 self.clear_area,
-                self.canvas_start_x, self.canvas_start_y,
-                event.x, event.y
+                self.canvas_start_x,
+                self.canvas_start_y,
+                event.x,
+                event.y,
             )
 
     def _on_release(self, event):
