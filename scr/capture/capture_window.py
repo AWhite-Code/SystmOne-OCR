@@ -3,7 +3,8 @@ import win32ui
 import win32con
 import win32api
 from PIL import Image
-from typing import List, Tuple
+from typing import List, Tuple, cast
+
 
 class CaptureWindow:
     def __init__(self):
@@ -18,14 +19,15 @@ class CaptureWindow:
         """Get information about all connected monitors."""
         monitor_info = []
         for monitor in self.monitors:
-            info = win32api.GetMonitorInfo(monitor[0])
+            handle = cast(int, monitor[0])
+            info = win32api.GetMonitorInfo(handle)
             monitor_info.append(info)
             print(f"Monitor info: {info}")
         return monitor_info
 
     def _calculate_screen_dimensions(self) -> Tuple[int, int, int, int]:
         """Calculate total dimensions across all monitors."""
-        monitor_rects = [info['Monitor'] for info in self.monitor_info]
+        monitor_rects = [info["Monitor"] for info in self.monitor_info]
         total_width = max(rect[2] for rect in monitor_rects)
         total_height = max(rect[3] for rect in monitor_rects)
         min_x = min(rect[0] for rect in monitor_rects)
@@ -70,9 +72,14 @@ class CaptureWindow:
             bmpinfo = saveBitMap.GetInfo()
             bmpstr = saveBitMap.GetBitmapBits(True)
             img = Image.frombuffer(
-                'RGB',
-                (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-                bmpstr, 'raw', 'BGRX', 0, 1)
+                "RGB",
+                (bmpinfo["bmWidth"], bmpinfo["bmHeight"]),
+                bmpstr,
+                "raw",
+                "BGRX",
+                0,
+                1,
+            )
 
             return img
 
