@@ -1,10 +1,23 @@
 import re
 from typing import List, Set, Tuple
 
+
 class TextProcessor:
     def __init__(self):
-        self.months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        self.months = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+        ]
 
     def format_date(self, text: str) -> str:
         """
@@ -14,10 +27,10 @@ class TextProcessor:
         - Year only: YYYY (e.g., 1975)
         """
         # Pattern for full dates (day + month + year)
-        full_date = r'(\d{1,2})\s*(' + '|'.join(self.months) + r')\s*(\d{4})'
+        full_date = r"(\d{1,2})\s*(" + "|".join(self.months) + r")\s*(\d{4})"
 
         # Pattern for month-year only
-        month_year = r'\b(' + '|'.join(self.months) + r')\s*(\d{4})\b'
+        month_year = r"\b(" + "|".join(self.months) + r")\s*(\d{4})\b"
 
         def format_full_date(match):
             day, month, year = match.groups()
@@ -45,20 +58,20 @@ class TextProcessor:
         - Multiple closing parentheses: X407Z))
         """
         # Normalize any Yen symbols to Y
-        text = text.replace('¥', 'Y')
+        text = text.replace("¥", "Y")
 
         # Patterns to remove, in order of specificity
         patterns = [
-            r'\s*\([A-Z0-9._]+\)+\s*$',     # (XE123), (X407Z))
-            r'\s+[A-Z][A-Z0-9._]+\)+\s*$',  # X407Z))
-            r'\s+[A-Z][A-Z0-9._]+\s*$',     # M1612
-            r'\s+[0-9][A-Z0-9]+\.[0-9]*\s*$', # 7F19.
-            r'\s*[.()]+\s*$'                 # Cleanup trailing dots/parentheses
+            r"\s*\([A-Z0-9._]+\)+\s*$",  # (XE123), (X407Z))
+            r"\s+[A-Z][A-Z0-9._]+\)+\s*$",  # X407Z))
+            r"\s+[A-Z][A-Z0-9._]+\s*$",  # M1612
+            r"\s+[0-9][A-Z0-9]+\.[0-9]*\s*$",  # 7F19.
+            r"\s*[.()]+\s*$",  # Cleanup trailing dots/parentheses
         ]
 
         # Apply each pattern in sequence
         for pattern in patterns:
-            text = re.sub(pattern, '', text)
+            text = re.sub(pattern, "", text)
 
         return text.strip()
 
@@ -68,17 +81,17 @@ class TextProcessor:
         """
         # Fix common OCR date formatting issues
         months = "(?:Oct|Dec|Feb|Jan|Mar|Apr|May|Jun|Jul|Aug|Sep|Nov)"
-        text = re.sub(f'(\d+)({months})', r'\1 \2', text)
+        text = re.sub(rf"(\d+)({months})", r"\1 \2", text)
 
         # Remove various OCR artifacts while preserving structure
         replacements = [
-            (r'[_~]', ''),                    # Remove underscores and tildes
-            (r'\[(?:Dj|D|X|Xj)\]', ''),       # Remove [D], [Dj], [X], [Xj]
-            (r'={1,2}\[(?:Xj|X)\]', ''),      # Remove =[X], =[Xj]
-            (r'(?:—|-)+\s*', ''),             # Remove em dashes and hyphens
-            (r'=+\s*', ''),                   # Remove equals signs
-            (r'NOS\s*\(', 'NOS '),            # Handle "NOS(" properly
-            (r'\s+', ' ')                     # Normalize spaces
+            (r"[_~]", ""),  # Remove underscores and tildes
+            (r"\[(?:Dj|D|X|Xj)\]", ""),  # Remove [D], [Dj], [X], [Xj]
+            (r"={1,2}\[(?:Xj|X)\]", ""),  # Remove =[X], =[Xj]
+            (r"(?:—|-)+\s*", ""),  # Remove em dashes and hyphens
+            (r"=+\s*", ""),  # Remove equals signs
+            (r"NOS\s*\(", "NOS "),  # Handle "NOS(" properly
+            (r"\s+", " "),  # Normalize spaces
         ]
 
         for pattern, replacement in replacements:
@@ -92,17 +105,17 @@ class TextProcessor:
 
         # Full date (DD MMM YYYY)
         if len(parts) >= 3 and parts[1] in self.months:
-            return ' '.join(parts[:3]), ' '.join(parts[3:])
+            return " ".join(parts[:3]), " ".join(parts[3:])
 
         # Month Year only
         elif len(parts) >= 2 and parts[0] in self.months:
-            return ' '.join(parts[:2]), ' '.join(parts[2:])
+            return " ".join(parts[:2]), " ".join(parts[2:])
 
         # Year only
         elif parts and parts[0].isdigit() and len(parts[0]) == 4:
-            return parts[0], ' '.join(parts[1:])
+            return parts[0], " ".join(parts[1:])
 
-        return None, None
+        return "", ""  # Return empty strings instead of None due to typing issue
 
     def process_text(self, text: str) -> str:
         """
@@ -110,10 +123,10 @@ class TextProcessor:
         Ensures proper handling of dates, descriptions, and removal of read codes.
         """
         # Initial cleanup of zero-width spaces
-        text = text.replace('\u200b', ' ')
+        text = text.replace("\u200b", " ")
 
         # Split into lines and process each line
-        lines = text.split('\n')
+        lines = text.split("\n")
         formatted_entries = []
 
         for line in lines:
@@ -143,4 +156,4 @@ class TextProcessor:
                 seen_entries.add(entry_key)
                 filtered_entries.append(entry)
 
-        return '\n'.join(filtered_entries)
+        return "\n".join(filtered_entries)
