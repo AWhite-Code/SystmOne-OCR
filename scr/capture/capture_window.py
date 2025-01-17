@@ -1,37 +1,27 @@
-import win32gui
-import win32ui
-import win32con
-import win32api
+import mss
+import mss.tools
 from PIL import Image
-from typing import List, Tuple, cast
+from typing import List, Tuple
 
 
 class CaptureWindow:
     def __init__(self):
-        # Get information about all monitors
-        self.monitors = win32api.EnumDisplayMonitors()
-        self.monitor_info = self._get_monitor_info()
-
+        self.sct = mss.mss()
         # Calculate total screen dimensions
         self.total_dimensions = self._calculate_screen_dimensions()
 
-    def _get_monitor_info(self) -> List[dict]:
-        """Get information about all connected monitors."""
-        monitor_info = []
-        for monitor in self.monitors:
-            handle = cast(int, monitor[0])
-            info = win32api.GetMonitorInfo(handle)
-            monitor_info.append(info)
-            print(f"Monitor info: {info}")
-        return monitor_info
-
     def _calculate_screen_dimensions(self) -> Tuple[int, int, int, int]:
         """Calculate total dimensions across all monitors."""
-        monitor_rects = [info["Monitor"] for info in self.monitor_info]
-        total_width = max(rect[2] for rect in monitor_rects)
-        total_height = max(rect[3] for rect in monitor_rects)
-        min_x = min(rect[0] for rect in monitor_rects)
-        min_y = min(rect[1] for rect in monitor_rects)
+        monitors = self.sct.monitors[1:]  # Skip the "all monitors" monitor
+        if not monitors:
+            # Fallback to primary monitor if no other monitors found
+            monitor = self.sct.monitors[0]
+            return (monitor["width"], monitor["height"], 0, 0)
+
+        total_width = max(m["left"] + m["width"] for m in monitors)
+        total_height = max(m["top"] + m["height"] for m in monitors)
+        min_x = min(m["left"] for m in monitors)
+        min_y = min(m["top"] for m in monitors)
 
         return total_width, total_height, min_x, min_y
 
@@ -39,7 +29,7 @@ class CaptureWindow:
         """Return the total screen dimensions."""
         return self.total_dimensions
 
-    def capture_screen(self, bbox: Tuple[int, int, int, int]) -> Image.Image:
+    def capture_screen(self, bbox: Tuple[float, float, float, float]) -> Image.Image:
         """
         Capture a portion of the screen.
 
@@ -49,43 +39,26 @@ class CaptureWindow:
         Returns:
             PIL Image of the captured area
         """
-        x1, y1, x2, y2 = bbox
-        width = x2 - x1
-        height = y2 - y1
-
-        # Create device context
-        hwnd = win32gui.GetDesktopWindow()
-        hwndDC = win32gui.GetWindowDC(hwnd)
-        mfcDC = win32ui.CreateDCFromHandle(hwndDC)
-        saveDC = mfcDC.CreateCompatibleDC()
-
         try:
-            # Create bitmap
-            saveBitMap = win32ui.CreateBitmap()
-            saveBitMap.CreateCompatibleBitmap(mfcDC, width, height)
-            saveDC.SelectObject(saveBitMap)
+            # Convert float coordinates to integers
+            x1, y1, x2, y2 = map(int, bbox)
 
-            # Copy screen to bitmap
-            saveDC.BitBlt((0, 0), (width, height), mfcDC, (x1, y1), win32con.SRCCOPY)
+            # Create the region dict that mss expects
+            region = {"top": y1, "left": x1, "width": x2 - x1, "height": y2 - y1}
+
+            # Capture the screenshot
+            screenshot = self.sct.grab(region)
 
             # Convert to PIL Image
-            bmpinfo = saveBitMap.GetInfo()
-            bmpstr = saveBitMap.GetBitmapBits(True)
-            img = Image.frombuffer(
-                "RGB",
-                (bmpinfo["bmWidth"], bmpinfo["bmHeight"]),
-                bmpstr,
-                "raw",
-                "BGRX",
-                0,
-                1,
-            )
+            return Image.frombytes("RGB", screenshot.size, screenshot.rgb)
 
-            return img
+        except Exception as e:
+            print(f"Screen capture error: {str(e)}")
+            raise
 
-        finally:
-            # Clean up
-            saveDC.DeleteDC()
-            mfcDC.DeleteDC()
-            win32gui.ReleaseDC(hwnd, hwndDC)
-            win32gui.DeleteObject(saveBitMap.GetHandle())
+    def __del__(self):
+        """Cleanup the mss instance."""
+        try:
+            self.sct.close()
+        except:
+            pass
