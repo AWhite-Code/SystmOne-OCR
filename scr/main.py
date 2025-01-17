@@ -49,9 +49,14 @@ class ScreenCaptureOCR:
     def _on_selection_complete(self, bbox):
         """Simple wrapper to call controller and quit selection window."""
         try:
-            self.controller.handle_selection(bbox)
+            # Get the text from controller
+            text = self.controller.handle_selection(bbox)
+            # Update the GUI with the text
+            self.window.update_latest_capture(text)
         finally:
             self.selection_window.quit()
+            # Show GUI again after capture
+            self.window.deiconify()
 
     def run(self):
         """Start the application with GUI."""
