@@ -24,15 +24,27 @@ class ScreenCaptureOCR:
         total_width, total_height, min_x, min_y = (
             self.capture_window.get_screen_dimensions()
         )
-        dimensions = (total_width, total_height, min_x, min_y)
+        self.dimensions = (total_width, total_height, min_x, min_y)
 
-        # Initialize selection window with controller
+        # Initialize GUI window with reference to this class
+        self.window = create_window(self)
+
+    def start_capture(self):
+        """Start the capture process when triggered from GUI"""
+        # Hide GUI during capture
+        self.window.withdraw()
+
+        # Initialize selection window
         self.selection_window = SelectionWindow(
-            dimensions=dimensions, on_selection_complete=self._on_selection_complete
+            dimensions=self.dimensions,
+            on_selection_complete=self._on_selection_complete,
         )
 
-        # Initialize GUI window
-        self.window = create_window()
+        # Start selection window
+        self.selection_window.start()
+
+        # Show GUI after capture
+        self.window.deiconify()
 
     def _on_selection_complete(self, bbox):
         """Simple wrapper to call controller and quit selection window."""
@@ -42,8 +54,8 @@ class ScreenCaptureOCR:
             self.selection_window.quit()
 
     def run(self):
-        """Start the application."""
-        self.selection_window.start()
+        """Start the application with GUI."""
+        self.window.mainloop()
 
 
 def main():

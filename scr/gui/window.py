@@ -3,8 +3,11 @@ import customtkinter as ctk
 
 
 class OCRWindow(ctk.CTk):
-    def __init__(self):
+    def __init__(self, app_controller):
         super().__init__()
+
+        # Store controller reference
+        self.app_controller = app_controller
 
         # Configure window
         self.title("Medical Record OCR")
@@ -25,8 +28,9 @@ class OCRWindow(ctk.CTk):
         self.button.grid(row=1, column=0, padx=20, pady=20)
 
     def on_capture_click(self):
-        print("Capture button clicked!")
+        """Handle capture button click"""
+        self.app_controller.start_capture()
 
 
-def create_window():
-    return OCRWindow()
+def create_window(app_controller):
+    return OCRWindow(app_controller)
